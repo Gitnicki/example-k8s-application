@@ -11,10 +11,10 @@ jobs:
       matrix:
         include:
           - dockerfile: ./backend/Dockerfile
-            image: "Gitnicki/example-backend"
+            image: "docknicki/example-backend"
             context: ./backend
           - dockerfile: ./frontend/Dockerfile
-            image: "Gitnicki/example-frontend"
+            image: "docknicki/example-frontend"
             context: ./frontend
     steps:
       - name: Checkout code
