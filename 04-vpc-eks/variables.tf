@@ -7,5 +7,5 @@ variable "region" {
 variable "clustername" {
   description = "default cluster name"
   type = string
-  default = "argo-ex-cks"
+  default = "argo-ex-eks"
 }
