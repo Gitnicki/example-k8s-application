@@ -87,3 +87,4 @@ tf plan
 tf apply 
 ## dadurch wird alles destroyed
 
+## Änderungen müssen immer commited und gepushed werden
