@@ -57,7 +57,7 @@ jobs:
       - name: Set up Ansible
         run: |
           echo "$PRIVATE_KEY" > ./ex-key.pem
-          chmod 600 ./ex-key.pem
+          chmod 600 ex-key.pem
           export ANSIBLE_HOST_KEY_CHECKING=False
       - name: Copy backend to EC2
         run: |
