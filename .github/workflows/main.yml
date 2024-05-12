@@ -5,10 +5,6 @@ on:
     branches:
       - main
 
-env:
-  IMAGE_NAME: docknicki/example-k8s-gh
-  IMAGE_TAG: 2.0.0
-
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
@@ -24,81 +20,30 @@ jobs:
         working-directory: ${{ github.workspace }}
 
       - name: Upload to S3
-        run: |
-          aws --version
-          cd frontend/dist/frontend/browser
-          aws s3 cp . s3://${{ secrets.AWS_S3_BUCKET }}/ --recursive
-        working-directory: ${{ github.workspace }}
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read --follow-symlinks --delete
+        env:
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SOURCE_DIR: ${{ github.workspace }}/frontend/dist
 
-  # build-backend:
-  #   runs-on: ubuntu-latest
-  #   if: github.ref_type == 'tag'
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v2
-
-  #     - name: Login to Docker Hub
-  #       run: echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-
-  #     - name: Build Docker Image
-  #       run: |
-  #         docker build -t ${{ secrets.IMAGE_NAME }}:${{ github.ref_name }} ./backend
-  #         docker images
-  #         docker push ${{ secrets.IMAGE_NAME }}:${{ github.ref_name }}
-  #       working-directory: ${{ github.workspace }}
-
-  # deploy-backend:
-  #   runs-on: ubuntu-latest
-  #   if: github.ref_type == 'tag'
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v2
-
-  #     - name: Setup SSH
-  #       run: |
-  #         echo "${{ secrets.PRIVATE_KEY }}" > ./temp_key.pem
-  #         chmod 600 ./temp_key.pem
-  #         export ANSIBLE_HOST_KEY_CHECKING=False
-  #       working-directory: ${{ github.workspace }}
-
-  #     - name: Deploy Backend
-  #       run: |
-  #         ansible --version
-  #         ansible-playbook -i hosts.ini deploy_backend.yml --private-key=./temp_key.pem
-  #         rm -f ./temp_key.pem
-  #       working-directory: ${{ github.workspace }}
-########################################################################
-  build_image:
+  deploy-backend:
     runs-on: ubuntu-latest
     needs: build-frontend
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Log in to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-      - name: Build and push
-        run: |
-          docker build -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
-          docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-
-  terraform:
-    runs-on: ubuntu-latest
-    needs: build_image
-    steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
+
+      - name: Copy SSH private key
+        run: echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+
+      - name: SSH into EC2 instance and deploy backend
+        run: |
+          scp -o StrictHostKeyChecking=no backend/ ec2-user@3.68.186.150:backend/
+          ssh -o StrictHostKeyChecking=no ec2-user@3.68.186.150 'bash -s' < backend/deploy_backend.sh
