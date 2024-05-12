@@ -61,6 +61,7 @@ jobs:
           export ANSIBLE_HOST_KEY_CHECKING=False
       - name: Run Ansible playbook
         run: |
+          ls -la
           ansible-playbook deploy-backend.yml --private-key=./ex-key.pem
           rm -f ./ex-key.pem
 
