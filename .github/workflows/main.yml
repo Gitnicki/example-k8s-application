@@ -61,7 +61,7 @@ jobs:
           export ANSIBLE_HOST_KEY_CHECKING=False
       - name: Copy backend to EC2
         run: |
-          scp -i ./ex-key.pem -r backend ec2-user@${{ secrets.PUBLIC_IP }}:/home/ec2-user/backend
+          scp -i ex-key.pem -r backend ec2-user@${{ secrets.PUBLIC_IP }}:/home/ec2-user/backend
       - name: Run Ansible playbook
         run: |
           ansible-playbook deploy_backend.yml --private-key=./ex-key.pem
