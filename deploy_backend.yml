@@ -1,0 +1,8 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Copy the backend directory to the EC2 instance
+      synchronize:
+        src: ./backend
+        dest: ./
+        recursive: yes
